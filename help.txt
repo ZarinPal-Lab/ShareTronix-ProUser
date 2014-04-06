@@ -1,0 +1,196 @@
+1- فایل زیپ را در روت باز کنید و قبل از آپلود در سرور پوشه زیر را به نام قالب خود تغییر دهید
+
+themes/default
+
+//////////////////////////////////////////////
+
+2- به themes/yourtheme/html/settings_leftmenu.php برید و کد زیر را در جای مناسب قرار دهید
+
+<a href="<?= $C->SITE_URL ?>settings/vip" class="<?= $this->request[1]=='vip' ? 'onsidenav' : '' ?>">بسته های ویژه</a>
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+3- به themes/yourtheme/html/admin_leftmenu.php برید و کد زیر را در جای مناسب قرار دهید
+
+<a href="<?= $C->SITE_URL ?>admin/vip" class="<?= $this->request[1]=='vip' ? 'onsidenav' : '' ?>">بسته های ویژه</a>
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+4- به system/classess/class_network.php برید و در آخر کد ها قبل از آخرین آکولاد  که در آخر فایل است کد زیر را بدهید
+
+
+//////////////////////
+public function get_box_vips($force_refresh=FALSE){
+
+$data = false;
+$cachekey	= 'n:'.$this->id.',box_vips';
+$data	= $this->cache->get($cachekey);
+			if( FALSE!==$data && TRUE!=$force_refresh ) {
+				return $data;
+			}
+$vips = array();			
+$q = $this->db2->query('SELECT * FROM box_vips ORDER BY id');			
+	while($o = $this->db2->fetch_object($q)){
+	
+	$vips[] = $o;
+	}		
+$this->cache->set($cachekey, $vips, $GLOBALS['C']->CACHE_EXPIRE);
+return $vips;		
+
+}
+public function get_vips_by_id($id,$force_refresh=FALSE){
+if(!intval($id)){
+return false;
+}
+$s = false;
+$data = false;
+$cachekey	= 'n:'.$this->id.',box_vips_id:'.$id;
+$data	= $this->cache->get($cachekey);
+			if( FALSE!==$data && TRUE!=$force_refresh ) {
+			
+				
+				return $data;
+				
+				}
+				
+			
+			
+		
+$q = $this->db2->query('SELECT * FROM box_vips WHERE id="'.$id.'" LIMIT 1');			
+	$data = $this->db2->fetch_object($q);
+	
+	
+	
+$this->cache->set($cachekey, $data, $GLOBALS['C']->CACHE_EXPIRE);
+return $data;		
+
+}
+public function get_vips_by_name($name,$force_refresh=FALSE){
+if(!trim($name)){
+return false;
+}
+$s = false;
+$data = false;
+$cachekey	= 'n:'.$this->id.',box_vips_name:'.$name;
+$data	= $this->cache->get($cachekey);
+			if( FALSE!==$data && TRUE!=$force_refresh ) {
+			
+				
+				return $data;
+				
+				}
+				
+			
+			
+		
+$q = $this->db2->query('SELECT * FROM box_vips WHERE name="'.$name.'" LIMIT 1');			
+	$data = $this->db2->fetch_object($q);
+	
+	
+	
+$this->cache->set($cachekey, $data, $GLOBALS['C']->CACHE_EXPIRE);
+return $data;		
+
+}
+
+public function get_user_vip_by_id($vid,$uid,$force_refresh=FALSE){
+if(!$u = $this->get_user_by_id($uid)){
+return false;
+}
+if(!$v = $this->get_vips_by_id($vid)){
+return false;
+}
+
+$data = false;
+$cachekey	= 'n:'.$this->id.',user_vip:'.$u->id.'vip_account:'.$v->id;
+$data	= $this->cache->get($cachekey);
+			if( FALSE!==$data && TRUE!=$force_refresh ) {
+			if($data->next_date < time() ){
+			$this->db2->query('DELETE  FROM users_vip WHERE user_id="'.$uid.'" AND vip_id="'.$vid.'" LIMIT 1');
+			return network::get_user_vip_by_id($vid,$uid,true);
+			}
+				return $data;
+			}
+			$data = false;
+$q = $this->db2->query('SELECT * FROM users_vip WHERE user_id="'.$u->id.'" AND vip_id="'.$v->id.'" LIMIT 1');
+$o = $this->db2->fetch_object($q);
+if(!empty($o)){
+$data = $o;
+}else{
+return false;
+}
+$this->cache->set($cachekey, $data, $GLOBALS['C']->CACHE_EXPIRE);
+if($data->next_date < time() ){
+			$this->db2->query('DELETE  FROM users_vip WHERE user_id="'.$uid.'" AND vip_id="'.$vid.'" LIMIT 1');
+			return network::get_user_vip_by_id($vid,$uid,true);
+			}
+return $data;		
+
+
+}
+public function get_user_vip($user,$limit=FALSE){
+if(!$u = $this->get_user_by_id($user)){
+return false;
+}
+$limit ? $limit = " LIMIT 1 " : $limit = "";
+$q = $this->db2->query('SELECT * FROM users_vip WHERE user_id="'.$u->id.'" '.$limit );
+$data = array();
+while($o = $this->db2->fetch_object($q)){
+
+$data[] = $o;
+}
+return $data;
+
+
+}
+
+public function valid_vip($vid,$uid){
+$u = $this->get_user_by_id($uid);
+$v = $this->get_vips_by_id($vid);
+if(!$u){
+return false;
+}
+if($u->is_network_admin == 1){
+return true;
+}
+
+
+if($this->get_user_vip_by_id($vid,$uid) && $this->get_vips_by_id($vid)){
+return true;
+}
+if(!$v || !$v->active){
+return true;
+}
+return false;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+5- کد زیر را در برگه sql در phpmyadmin اجرا کنید
+
+CREATE TABLE IF NOT EXISTS `users_vip` (
+  `id` int(10) NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) NOT NULL,
+  `vip_id` int(10) NOT NULL,
+  `vip_name` varchar(32) COLLATE utf8_persian_ci NOT NULL,
+  `vip_p` varchar(32) COLLATE utf8_persian_ci NOT NULL,
+  `date` varchar(32) COLLATE utf8_persian_ci NOT NULL,
+  `next_date` varchar(128) COLLATE utf8_persian_ci NOT NULL,
+  `rkey` varchar(128) COLLATE utf8_persian_ci NOT NULL,
+  `trak` varchar(255) COLLATE utf8_persian_ci NOT NULL,
+  `amount` int(10) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 COLLATE=utf8_persian_ci AUTO_INCREMENT=1 ;
+
+CREATE TABLE `box_vips` (
+`id` INT( 10 ) UNSIGNED NOT NULL AUTO_INCREMENT ,
+`name` VARCHAR( 255 ) NOT NULL ,
+`title` VARCHAR( 255 ) NOT NULL ,
+`one` INT( 10 ) UNSIGNED NOT NULL DEFAULT '0',
+`tree` INT( 10 ) UNSIGNED NOT NULL DEFAULT '0',
+`six` INT( 10 ) UNSIGNED NOT NULL DEFAULT '0',
+`tw` INT( 10 ) UNSIGNED NOT NULL DEFAULT '0',
+`active` SMALLINT( 1 ) UNSIGNED NOT NULL DEFAULT '0',
+PRIMARY KEY ( `id` )
+) ENGINE = MYISAM ;
